@@ -1,0 +1,26 @@
+OrderCode,MVA,BIL,YV/TV Present (Connection_YV or Connection_TV key exists in DB),Auto(Yes/No),Conservator,Winding Type,After Test Required (keyword After All Tests exists in DB),Transformer Type
+WT00705,8,350,Yes,No,No,3 Winding,No,Medium
+WT04574,28,550,No,No,No,2 Winding,No,Medium
+WT04985,79.2,1050,No,No,Yes,2 Winding,No,EHV
+WT05159,25,550,Yes,Yes,No,2 Winding,No,Medium
+WT05401,60,750,No,No,No,2 Winding,No,Large
+WT05478,33.6,350,Yes,No,Yes,3 Winding,Yes,Medium
+WT05658,10,550,No,No,No,2 Winding,No,Medium
+WT05651,240,825,Yes,Yes,Yes,2 Winding,No,Large
+WT05890,22.5,550,Yes,No,No,3 Winding,Yes,Medium
+WT05935,420,1050,No,Yes,No,2 Winding,No,EHV
+WT06096,90,650,Yes,Yes,No,2 Winding,Yes,EHV
+WT06139,36,750,No,No,No,2 Winding,No,Large
+WT06185,15,450,No,No,No,2 Winding,No,Medium
+WT06227,16.8,550,No,No,No,2 Winding,No,Medium
+WT06233,28,550,No,No,No,2 Winding,No,Medium
+WT06286,75,150,Yes,No,No,3 Winding,No,Medium
+WT06657,300,1050,Yes,Yes,Yes,2 Winding,Yes,EHV
+WT07042,150,550,Yes,Yes,Yes,2 Winding,No,Large
+WT04850,168,750,Yes,Yes,Yes,2 Winding,No,Large
+WT05560,24,450,No,No,No,2 Winding,No,Medium
+WT04648,8.4,550,No,No,No,2 Winding,Yes,Medium
+WT05031,42,350,No,No,No,2 Winding,Yes,Medium
+WT04906,33.6,350,No,No,No,2 Winding,Yes,Medium
+WT05052,42,350,No,No,No,2 Winding,Yes,Medium
+WT05315,33,450,Yes,No,No,3 Winding,Yes,Medium

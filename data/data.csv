@@ -1,0 +1,9 @@
+OrderCode,MVA,BIL,YV/TV Present (Connection_YV or Connection_TV key exists in DB),Auto(Yes/No),Conservator,Winding Type,After Test Required (keyword After All Tests exists in DB)
+WT00705,8,350,Yes,No,No,3 Winding,No
+WT04574,28,550,No,No,No,2 Winding,No
+WT04985,79.2,1050,No,No,Yes,2 Winding,No
+WT05159,25,550,Yes,Yes,No,2 Winding,No
+WT05401,60,750,No,No,No,2 Winding,No
+WT05478,33.6,350,Yes,No,Yes,3 Winding,Yes
+WT05658,10,550,No,No,No,2 Winding,No
+WT05651,240,825,Yes,Yes,Yes,2 Winding,No

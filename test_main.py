@@ -1,11 +1,16 @@
+import dotenv
 import google.generativeai as genai  # pylint: disable=import-error
 import csv
 import json
 import time
 from google.api_core.exceptions import ResourceExhausted
 
+# Load environment variables from .env file
+dotenv.load_dotenv()
+# Ensure the .env file is in the same directory as this script
+
 # Define Google API Key
-GOOGLE_API_KEY = 'AIzaSyDOcEsPOwfMRiYP9KHshZgt-j-ikA1tDXs'
+GOOGLE_API_KEY = dotenv.get_key('.env', 'GOOGLE_API_KEY')
 genai.configure(api_key=GOOGLE_API_KEY)
 model = genai.GenerativeModel('gemini-2.0-flash')
 
@@ -15,9 +20,9 @@ You are a classification assistant for transformer data. Based on the rubric pro
 
 ## Rubric:
 Step 1: Transformer Type
-- Medium: MVA < 60 and BIL < 650
+- Medium: MVA < 60 and BIL < 650 (Conservator Unit does not matter)
 - Large: MVA ≥ 60 (Other) or ≥ 36 (Auto), and BIL ≥ 750, and Conservator Unit = True
-- EHV: MVA > 90 or BIL = 1150/1300
+- EHV: MVA > 90 and any BIL (Conservator Unit = False) or BIL = 1150/1300 (Conservator Unit = False)
 
 Step 2: Winding Type
 - Three-Winding: "TV" or "YV" present in Winding Config and Type is not "Auto"
@@ -59,11 +64,13 @@ def normalize_winding(val):
     return 'Three-Winding' if '3' in val else 'Two-Winding'
 
 def normalize_transformer_type(val):
-    return val.strip().capitalize()
+    return val.strip().capitalize() if val else 'Unknown'
 
 def test_transformers():
     with open('data/updated_data.csv', 'r') as file:
         reader = csv.DictReader(file)
+        total = 0
+        correct = 0
         for row in reader:
             prompt = build_prompt(row)
             while True:
@@ -95,6 +102,12 @@ def test_transformers():
             print(f"{row['OrderCode']}: Winding Type: AI={ai_result['winding_type']} | CSV={expected_winding} | Match={winding_match}")
             print(f"{row['OrderCode']}: After Test Required: AI={ai_result['after_test_required']} | CSV={expected_after_test} | Match={after_test_match}")
             print('-' * 60)
+
+            total += 1
+            if winding_match and after_test_match and transformer_type_match:
+                correct += 1
+        
+        print(f"Total: {total}, Correct: {correct}, Accuracy: {correct / total * 100:.2f}%")
 
 if __name__ == "__main__":
     test_transformers()

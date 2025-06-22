@@ -1,4 +1,4 @@
-# Prolec GE Transformer LLM POC
+# Transformer LLM POC
 
 A proof-of-concept project that classifies transformer specifications using Google’s Gemini API (LLM). Based on the classification, the system also retrieves corresponding operational metrics (cycle time, labor hours, test schedule) from SAP master data.
 

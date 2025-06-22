@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+
+# Virtual environments
+venv/
+.env
+.env.*
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+
+# VSCode
+.vscode/
+
+# macOS
+.DS_Store
+
+# Data and API keys
+*.sqlite3
+*.db
+*.log
+*.bak
+*.tmp
+
+# Ignore SAP.json if sensitive
+# data/SAP.json
+
+# Ignore test outputs
+*.out
+*.test
+
+# Ignore CSV backups
+*.csv~
+
+# Ignore system files
+Thumbs.db
+ehthumbs.db
+
+# Ignore package lock files
+poetry.lock
+Pipfile.lock

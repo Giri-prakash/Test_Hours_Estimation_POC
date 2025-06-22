@@ -26,13 +26,20 @@ This project uses the following Python packages (see `requirements.txt`):
 ## Files
 
 - `main.py`: Classifies a single transformer based on user input. Prompts for a transformer ID, fetches its data from the CSV, sends a prompt to the Gemini API, and prints the classification result. Then, it uses the classification to look up and print cycle, labor, and test schedule hours from `data/SAP.json`.
-- `test_main.py`: Batch tests all transformers in the CSV. For each row, sends a prompt to the Gemini API, parses the response, and compares the AI's output to the expected values in the CSV for transformer type, winding type, and after test required. Handles API rate limits automatically.
+- `tests/test_main.py`: Batch tests all transformers in the CSV. For each row, sends a prompt to the Gemini API, parses the response, and compares the AI's output to the expected values in the CSV for transformer type, winding type, and after test required. Handles API rate limits automatically.
 - `data/updated_data.csv`: Source data for transformers, including all fields used for classification and expected results for validation.
 - `data/SAP.json`: SAP Master File containing cycle time, labor hours, and test schedule hours for different transformer types and test scenarios. Used by `main.py` to provide additional operational data based on AI classification.
 - `requirements.txt`: Python dependencies for the project.
 - `.env`: (Not included in repo) Should contain your `GOOGLE_API_KEY` for the Gemini API.
 
 ## Usage
+
+### 0. (Recommended) Create and activate a virtual environment
+
+```bash
+python3 -m venv venv
+source venv/bin/activate  # On Windows use: venv\Scripts\activate
+```
 
 ### 1. Install dependencies
 
@@ -42,7 +49,7 @@ pip install -r requirements.txt
 
 ### 2. Set up your API key
 
-Create a `.env` file in the project root with the following content:
+#### Create a `.env` file in the project root with the following content:
 
 ```
 GOOGLE_API_KEY=your_google_gemini_api_key_here
@@ -59,7 +66,7 @@ Follow the prompt to enter a transformer ID. The script will print the classific
 ### 4. Run batch test
 
 ```bash
-python3 test_main.py
+python3 tests/test_main.py
 ```
 
 The script will process all transformers in the CSV, compare AI results to expected values, and handle API rate limits automatically.

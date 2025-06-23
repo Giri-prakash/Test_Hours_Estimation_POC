@@ -19,13 +19,14 @@ def build_prompt(row):
 You are a classification assistant for transformer data. Based on the rubric provided, classify the transformer type, winding type, and whether an After Test is required.
 
 ## Rubric:
-Step 1: Transformer Type
+Step 1: Transformer Type (Check if EHV first, then Large, then Medium)
+- EHV: (MVA > 90 and any BIL and **Conservator Unit = False is required for a transformer to be an EHV**) or (BIL = 1150/1300 and **Conservator Unit = False is required for a transformer to be an EHV**)
+- Large: **A Large transformer needs to have a conservator unit** MVA ≥ 60 (Other) or ≥ 36 (Auto), and BIL ≥ 750
 - Medium: MVA < 60 and BIL < 650 (Conservator Unit does not matter)
-- Large: MVA ≥ 60 (Other) or ≥ 36 (Auto), and BIL ≥ 750, and Conservator Unit = True
-- EHV: MVA > 90 and any BIL (Conservator Unit = False) or BIL = 1150/1300 (Conservator Unit = False)
+
 
 Step 2: Winding Type
-- Three-Winding: "TV" or "YV" present in Winding Config and Type is not "Auto"
+- Three-Winding: Type should not be "Auto" to be classified as Three-Winding and "TV" or "YV" present in Winding Config
 - Two-Winding: all other cases
 
 Step 3: After Test Requirement
@@ -44,17 +45,20 @@ The output should be a JSON object with the following keys:
 - "transformer_type": The type of transformer (Medium, Large, EHV)
 - "winding_type": The type of winding (Three-Winding, Two-Winding)
 - "after_test_required": Boolean indicating if an After Test is required
+- 'reason_for_transformer_type': A brief explanation of the classification
 ## Example Output:
 """
     prompt = rubric + """
 {
-  "transformer_type": "Medium",
+  "transformer_type": "EHV",
   "winding_type": "Two-Winding",
-  "after_test_required": false
+  "after_test_required": false,
+  "reason_for_winding_type": "The winding type is classified as Two-Winding because the transformer does not have 'TV' or 'YV' in its winding configuration and is not an Auto type."
 }
 
 ## Output:
 """
+
     return prompt
 
 def normalize_bool(val):

@@ -66,6 +66,7 @@ Step 4: Series Parallel
 Step 5: Before Impulse
 - If Before Impulse is equal to 'Yes', then Before Impulse = True, else False
 
+
 ## Input:
 MVA: {row['MVA']}  
 BIL: {row['BIL']}  
@@ -74,6 +75,8 @@ Conservator Unit: {'True' if row['Conservator'] == 'Yes' else 'False'}
 Winding Config: {'TV' if row['YV/TV Present'] == 'Yes' else 'Other'}  
 Series Parallel: {row['Series/Parallel']}  
 Before Impulse: {row['Before Impulse']}
+NamePlate Column: {row['None/nameplate']}
+OnCover: {row['Oncover']}
 Test Codes: {'ALL TESTS' if row['After Test Required (keyword After All Tests exists in DB)'] == 'Yes' else 'None'}  
 
 ## Output Format:
@@ -84,6 +87,8 @@ The output should be a JSON object with the following keys:
 - "series_parallel": Boolean indicating if Series Parallel is True
 - "before_impulse": Boolean indicating if Before Impulse is True
 - 'reason_for_transformer_type': A brief explanation of the classification
+- 'Nameplate': The value from the NamePlate column
+- 'OnCover': The value from the OnCover column
 ## Example Output:
 """
     prompt = rubric + """
@@ -93,7 +98,9 @@ The output should be a JSON object with the following keys:
   "after_test_required": false,
   "series_parallel": true,
   "before_impulse": false,
-  "reason_for_transformer_type": "The transformer is classified as EHV because the MVA is greater than 90."
+  "reason_for_transformer_type": "The transformer is classified as EHV because the MVA is greater than 90.",
+  "Nameplate": "Example Nameplate Value",
+  "OnCover": "Example OnCover Value"
 }
 
 ## Output:
@@ -143,78 +150,87 @@ after_test_required = result.get('after_test_required')
 before_impulse = result.get('before_impulse')
 series_parallel = result.get('series_parallel')
 
+#bushing parameters
+nameplate = result.get('Nameplate')
+on_cover = result.get('OnCover')
+
 # Cap/DF Hours
 cap_df_cycle_time = None
 cap_df_labor_hours = None
-cap_df_test_schedule_hour = None
 
 # Core Loss Hours
 core_loss_cycle_time = None
 core_loss_labor_hours = None
-core_loss_test_schedule_hour = None
+
+#bushing Hours
+bushing_cycle_time = None
+bushing_labor_hours = None
 
 # Determine the cycle time, labor hours, and test schedule hour for the Cap/DF test based on the transformer type and winding type
 if winding_type == 'Two-Winding':
     if after_test_required:
         cap_df_cycle_time = sap_data.get(f'{result.get('transformer_type')} Power(Cycle Time)', {}).get('44')
         cap_df_labor_hours = sap_data.get(f'{result.get('transformer_type')} Power(Labor Hours)', {}).get('44')
-        cap_df_test_schedule_hour = sap_data.get(f'{result.get('transformer_type')} Power(Test Schedule Hour)', {}).get('44')
     else:
         cap_df_cycle_time = sap_data.get(f'{result.get('transformer_type')} Power(Cycle Time)', {}).get('42')
         cap_df_labor_hours = sap_data.get(f'{result.get('transformer_type')} Power(Labor Hours)', {}).get('42')
-        cap_df_test_schedule_hour = sap_data.get(f'{result.get('transformer_type')} Power(Test Schedule Hour)', {}).get('42')
 elif winding_type == 'Three-Winding':
     if after_test_required:
         cap_df_cycle_time = sap_data.get(f'{result.get('transformer_type')} Power(Cycle Time)', {}).get('45')
         cap_df_labor_hours = sap_data.get(f'{result.get('transformer_type')} Power(Labor Hours)', {}).get('45')
-        cap_df_test_schedule_hour = sap_data.get(f'{result.get('transformer_type')} Power(Test Schedule Hour)', {}).get('45')
     else:
         cap_df_cycle_time = sap_data.get(f'{result.get('transformer_type')} Power(Cycle Time)', {}).get('43')
         cap_df_labor_hours = sap_data.get(f'{result.get('transformer_type')} Power(Labor Hours)', {}).get('43')
-        cap_df_test_schedule_hour = sap_data.get(f'{result.get('transformer_type')} Power(Test Schedule Hour)', {}).get('43')
 
 # Determine the cycle time, labor hours, and test schedule hour for the Core Loss test based on the transformer type
 if before_impulse:
     if series_parallel:
         core_loss_cycle_time = sap_data.get(f'{result.get('transformer_type')} Power(Cycle Time)', {}).get('98')
         core_loss_labor_hours = sap_data.get(f'{result.get('transformer_type')} Power(Labor Hours)', {}).get('98')
-        core_loss_test_schedule_hour = sap_data.get(f'{result.get('transformer_type')} Power(Test Schedule Hour)', {}).get('98')
     else:
         core_loss_cycle_time = sap_data.get(f'{result.get('transformer_type')} Power(Cycle Time)', {}).get('96')
         core_loss_labor_hours = sap_data.get(f'{result.get('transformer_type')} Power(Labor Hours)', {}).get('96')
-        core_loss_test_schedule_hour = sap_data.get(f'{result.get('transformer_type')} Power(Test Schedule Hour)', {}).get('96')
 else:
     if series_parallel:
         core_loss_cycle_time = sap_data.get(f'{result.get('transformer_type')} Power(Cycle Time)', {}).get('97')
         core_loss_labor_hours = sap_data.get(f'{result.get('transformer_type')} Power(Labor Hours)', {}).get('97')
-        core_loss_test_schedule_hour = sap_data.get(f'{result.get('transformer_type')} Power(Test Schedule Hour)', {}).get('97')
     else:
         core_loss_cycle_time = sap_data.get(f'{result.get('transformer_type')} Power(Cycle Time)', {}).get('95')
         core_loss_labor_hours = sap_data.get(f'{result.get('transformer_type')} Power(Labor Hours)', {}).get('95')
-        core_loss_test_schedule_hour = sap_data.get(f'{result.get('transformer_type')} Power(Test Schedule Hour)', {}).get('95')
+
+# Determine the cycle time, labor hours, and test schedule hour for the bushing test based on the transformer type
+if nameplate == "NP":
+    print("Nameplate is NP, using 50 as parameter number")
+    bushing_cycle_time = sap_data.get(f'{result.get('transformer_type')} Power(Cycle Time)', {}).get('50')
+    bushing_labor_hours = sap_data.get(f'{result.get('transformer_type')} Power(Labor Hours)', {}).get('50')
+else:
+    if winding_type == 'Two-Winding':
+        bushing_cycle_time += sap_data.get(f'{result.get('transformer_type')} Power(Cycle Time)', {}).get('51')
+        bushing_labor_hours = sap_data.get(f'{result.get('transformer_type')} Power(Labor Hours)', {}).get('51')
+    elif winding_type == 'Three-Winding':
+        bushing_cycle_time = sap_data.get(f'{result.get('transformer_type')} Power(Cycle Time)', {}).get('52')
+        bushing_labor_hours = sap_data.get(f'{result.get('transformer_type')} Power(Labor Hours)', {}).get('52')
 
 print(f"Cap/DF Cycle|Labour|Test Schedule Hours for Transformer ID {transformer_id}:")
 print(f"\nCycle Time: {cap_df_cycle_time}")
 print(f"Labor Hours: {cap_df_labor_hours}")
-print(f"Test Schedule Hour: {cap_df_test_schedule_hour}\n")
 
 print(f"Core Loss Cycle|Labour|Test Schedule Hours for Transformer ID {transformer_id}:")
 print(f"\nCycle Time: {core_loss_cycle_time}")
 print(f"Labor Hours: {core_loss_labor_hours}")
-print(f"Test Schedule Hour: {core_loss_test_schedule_hour}\n")
 
-# Calculate total estimated hours for Cap/DF and Core Loss separately
-if cap_df_cycle_time and cap_df_labor_hours and cap_df_test_schedule_hour:
-    total_cap_df_hours = cap_df_cycle_time + cap_df_labor_hours + cap_df_test_schedule_hour
-    print(f'\nTotal Estimated Cap/DF Hours: {total_cap_df_hours}\n')
-else:
-    print('Total Estimated Cap/DF Hours: N/A\n')
+print(f"bushing Cycle|Labour|Test Schedule Hours for Transformer ID {transformer_id}:")
+print(f"\nCycle Time: {bushing_cycle_time}")
+print(f"Labor Hours: {bushing_labor_hours}")
 
-if core_loss_cycle_time and core_loss_labor_hours and core_loss_test_schedule_hour:
-    total_core_loss_hours = core_loss_cycle_time + core_loss_labor_hours + core_loss_test_schedule_hour
-    print(f'Total Estimated Core Loss Hours: {total_core_loss_hours}\n')
+# Calculate total estimated hours for all tests
+if cap_df_cycle_time and cap_df_labor_hours and core_loss_cycle_time and core_loss_labor_hours and bushing_cycle_time and bushing_labor_hours:
+    total_cycle_time = cap_df_cycle_time + core_loss_cycle_time + bushing_cycle_time
+    total_labor_hours = cap_df_labor_hours + core_loss_labor_hours + bushing_labor_hours
+    print(f'\nTotal Estimated Cycle Time: {total_cycle_time}\n')
+    print(f'Total Estimated Labor Hours: {total_labor_hours}\n')
 else:
-    print('Total Estimated Core Loss Hours: N/A\n')
+    print('Total Estimated Hours: N/A\n')
 
 # def get_test_index(test_name, sap_json_path='data/SAP.json'):
 #     """

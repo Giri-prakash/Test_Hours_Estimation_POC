@@ -1,0 +1,41 @@
+﻿1. EHV (Extra High Voltage Transformer)
+if transformer.Base_MVA > 90:
+    return "EHV"
+elif transformer.BIL > 900:
+    return "EHV"
+Conservator presence is irrelevant for EHV.
+________________
+
+
+2. Large Power Transformer
+Only if not EHV, check this:
+✅ For 2-Winding:
+if transformer.Base_MVA >= 60:
+    return "Large Power"
+elif transformer.BIL >= 750:
+    return "Large Power"
+elif transformer.has_conservator:
+    return "Large Power"
+✅ For 3-Winding or Autotransformer:
+if transformer.Base_MVA >= 36:
+    return "Large Power"
+elif transformer.BIL >= 750:
+    return "Large Power"
+elif transformer.has_conservator:
+    return "Large Power"
+________________
+
+
+3. Medium Power Transformer
+If it does not match any of the above conditions:
+return "Medium Power"
+________________
+
+
+🔁 Final Logic Flow (Correct Order)
+if is_ehv(transformer):
+    return "EHV"
+elif is_large_power(transformer):  # Includes conservator, BIL, or MVA rules
+    return "Large Power"
+else:
+    return "Medium Power"

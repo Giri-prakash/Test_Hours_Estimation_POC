@@ -13,7 +13,7 @@ transformer_id = input("\nTransformer ID: ")
 transformer_row = None
 
 # Loading current transformer data
-with open('data/updated_data.csv', 'r') as file:
+with open('data/core_loss-bushing_data.csv', 'r') as file:
     reader = csv.DictReader(file)
     for row in reader:
         if transformer_id in row['OrderCode']:
@@ -37,25 +37,43 @@ def build_prompt(row):
 You are a classification assistant for transformer data. Based on the rubric provided, classify the transformer type, winding type, and whether an After Test is required.
 
 ## Rubric:
-Step 1: Transformer Type (Check if EHV first, then Large, then Medium)
-- EHV: (MVA > 90 and any BIL and **Conservator Unit = False is required for a transformer to be an EHV**) or (BIL = 1150/1300 and **Conservator Unit = False is required for a transformer to be an EHV**)
-- Large: **A Large transformer needs to have a conservator unit** MVA ≥ 60 (Other) or ≥ 36 (Auto), and BIL ≥ 750
-- Medium: MVA < 60 and BIL < 650 (Conservator Unit does not matter)
-
-
-Step 2: Winding Type
+Step 1: Winding Type
 - Three-Winding: Type should not be "Auto" to be classified as Three-Winding and "TV" or "YV" present in Winding Config
 - Two-Winding: all other cases
 
+Step 2: Transformer Type (Check if EHV first, then Large, then Medium)
+- EHV (Extra High Voltage Transformer):
+    - If MVA > 90: EHV
+    - Else if BIL > 900: EHV
+    - Conservator presence is irrelevant for EHV.
+- Large Transformer (only if not EHV):
+    - For Type = 'Other' and Winding Type = 'Two-Winding':
+        - If MVA >= 60: Large
+        - Else if BIL >= 750: Large
+        - Else if Conservator Unit is present: Large
+    - For Type = 'Auto'/Winding Type = 'Three-Winding':
+        - If MVA >= 36: Large
+        - Else if BIL >= 750: Large
+        - Else if Conservator Unit is present: Large
+- Medium Transformer: If it does not match any of the above conditions: Medium
+
 Step 3: After Test Requirement
 - If the test code contains "ALL TESTS", then After Test Required = True
+
+Step 4: Series Parallel
+- If Series Parallel is equal to 'Yes', then Series Parallel = True, else False
+
+Step 5: Before Impulse
+- If Before Impulse is equal to 'Yes', then Before Impulse = True, else False
 
 ## Input:
 MVA: {row['MVA']}  
 BIL: {row['BIL']}  
 Type: {'Auto' if row['Auto(Yes/No)'] == 'Yes' else 'Other'}  
 Conservator Unit: {'True' if row['Conservator'] == 'Yes' else 'False'}  
-Winding Config: {'TV' if row['YV/TV Present (Connection_YV or Connection_TV key exists in DB)'] == 'Yes' else 'Other'}  
+Winding Config: {'TV' if row['YV/TV Present'] == 'Yes' else 'Other'}  
+Series Parallel: {row['Series/Parallel']}  
+Before Impulse: {row['Before Impulse']}
 Test Codes: {'ALL TESTS' if row['After Test Required (keyword After All Tests exists in DB)'] == 'Yes' else 'None'}  
 
 ## Output Format:
@@ -63,6 +81,8 @@ The output should be a JSON object with the following keys:
 - "transformer_type": The type of transformer (Medium, Large, EHV)
 - "winding_type": The type of winding (Three-Winding, Two-Winding)
 - "after_test_required": Boolean indicating if an After Test is required
+- "series_parallel": Boolean indicating if Series Parallel is True
+- "before_impulse": Boolean indicating if Before Impulse is True
 - 'reason_for_transformer_type': A brief explanation of the classification
 ## Example Output:
 """
@@ -71,7 +91,9 @@ The output should be a JSON object with the following keys:
   "transformer_type": "EHV",
   "winding_type": "Two-Winding",
   "after_test_required": false,
-  "reason_for_winding_type": "The winding type is classified as Two-Winding because the transformer does not have 'TV' or 'YV' in its winding configuration and is not an Auto type."
+  "series_parallel": true,
+  "before_impulse": false,
+  "reason_for_transformer_type": "The transformer is classified as EHV because the MVA is greater than 90."
 }
 
 ## Output:
@@ -113,34 +135,103 @@ with open('data/SAP.json', 'r') as sap_file:
 
 # print("Parameter 42 from Medium Power(Cycle Time):", parameter_42)
 
+# Cap/DF parameters
 winding_type = result.get('winding_type')
 after_test_required = result.get('after_test_required')
 
-cycle_time = None
-labor_hours = None
-test_schedule_hour = None
+# Core Loss parameters
+before_impulse = result.get('before_impulse')
+series_parallel = result.get('series_parallel')
 
+# Cap/DF Hours
+cap_df_cycle_time = None
+cap_df_labor_hours = None
+cap_df_test_schedule_hour = None
+
+# Core Loss Hours
+core_loss_cycle_time = None
+core_loss_labor_hours = None
+core_loss_test_schedule_hour = None
+
+# Determine the cycle time, labor hours, and test schedule hour for the Cap/DF test based on the transformer type and winding type
 if winding_type == 'Two-Winding':
     if after_test_required:
-        cycle_time = sap_data.get('Medium Power(Cycle Time)', {}).get('44')
-        labor_hours = sap_data.get('Medium Power(Labor Hours)', {}).get('44')
-        test_schedule_hour = sap_data.get('Medium Power(Test Schedule Hour)', {}).get('44')
+        cap_df_cycle_time = sap_data.get(f'{result.get('transformer_type')} Power(Cycle Time)', {}).get('44')
+        cap_df_labor_hours = sap_data.get(f'{result.get('transformer_type')} Power(Labor Hours)', {}).get('44')
+        cap_df_test_schedule_hour = sap_data.get(f'{result.get('transformer_type')} Power(Test Schedule Hour)', {}).get('44')
     else:
-        cycle_time = sap_data.get('Medium Power(Cycle Time)', {}).get('42')
-        labor_hours = sap_data.get('Medium Power(Labor Hours)', {}).get('42')
-        test_schedule_hour = sap_data.get('Medium Power(Test Schedule Hour)', {}).get('42')
+        cap_df_cycle_time = sap_data.get(f'{result.get('transformer_type')} Power(Cycle Time)', {}).get('42')
+        cap_df_labor_hours = sap_data.get(f'{result.get('transformer_type')} Power(Labor Hours)', {}).get('42')
+        cap_df_test_schedule_hour = sap_data.get(f'{result.get('transformer_type')} Power(Test Schedule Hour)', {}).get('42')
 elif winding_type == 'Three-Winding':
     if after_test_required:
-        cycle_time = sap_data.get(f'{result.get('transformer_type')} Power(Cycle Time)', {}).get('45')
-        labor_hours = sap_data.get(f'{result.get('transformer_type')} Power(Labor Hours)', {}).get('45')
-        test_schedule_hour = sap_data.get(f'{result.get('transformer_type')} Power(Test Schedule Hour)', {}).get('45')
+        cap_df_cycle_time = sap_data.get(f'{result.get('transformer_type')} Power(Cycle Time)', {}).get('45')
+        cap_df_labor_hours = sap_data.get(f'{result.get('transformer_type')} Power(Labor Hours)', {}).get('45')
+        cap_df_test_schedule_hour = sap_data.get(f'{result.get('transformer_type')} Power(Test Schedule Hour)', {}).get('45')
     else:
-        cycle_time = sap_data.get(f'{result.get('transformer_type')} Power(Cycle Time)', {}).get('43')
-        labor_hours = sap_data.get(f'{result.get('transformer_type')} Power(Labor Hours)', {}).get('43')
-        test_schedule_hour = sap_data.get(f'{result.get('transformer_type')} Power(Test Schedule Hour)', {}).get('43')
+        cap_df_cycle_time = sap_data.get(f'{result.get('transformer_type')} Power(Cycle Time)', {}).get('43')
+        cap_df_labor_hours = sap_data.get(f'{result.get('transformer_type')} Power(Labor Hours)', {}).get('43')
+        cap_df_test_schedule_hour = sap_data.get(f'{result.get('transformer_type')} Power(Test Schedule Hour)', {}).get('43')
+
+# Determine the cycle time, labor hours, and test schedule hour for the Core Loss test based on the transformer type
+if before_impulse:
+    if series_parallel:
+        core_loss_cycle_time = sap_data.get(f'{result.get('transformer_type')} Power(Cycle Time)', {}).get('98')
+        core_loss_labor_hours = sap_data.get(f'{result.get('transformer_type')} Power(Labor Hours)', {}).get('98')
+        core_loss_test_schedule_hour = sap_data.get(f'{result.get('transformer_type')} Power(Test Schedule Hour)', {}).get('98')
+    else:
+        core_loss_cycle_time = sap_data.get(f'{result.get('transformer_type')} Power(Cycle Time)', {}).get('96')
+        core_loss_labor_hours = sap_data.get(f'{result.get('transformer_type')} Power(Labor Hours)', {}).get('96')
+        core_loss_test_schedule_hour = sap_data.get(f'{result.get('transformer_type')} Power(Test Schedule Hour)', {}).get('96')
+else:
+    if series_parallel:
+        core_loss_cycle_time = sap_data.get(f'{result.get('transformer_type')} Power(Cycle Time)', {}).get('97')
+        core_loss_labor_hours = sap_data.get(f'{result.get('transformer_type')} Power(Labor Hours)', {}).get('97')
+        core_loss_test_schedule_hour = sap_data.get(f'{result.get('transformer_type')} Power(Test Schedule Hour)', {}).get('97')
+    else:
+        core_loss_cycle_time = sap_data.get(f'{result.get('transformer_type')} Power(Cycle Time)', {}).get('95')
+        core_loss_labor_hours = sap_data.get(f'{result.get('transformer_type')} Power(Labor Hours)', {}).get('95')
+        core_loss_test_schedule_hour = sap_data.get(f'{result.get('transformer_type')} Power(Test Schedule Hour)', {}).get('95')
 
 print(f"Cap/DF Cycle|Labour|Test Schedule Hours for Transformer ID {transformer_id}:")
-print(f"\nCycle Time: {cycle_time}")
-print(f"Labor Hours: {labor_hours}")
-print(f"Test Schedule Hour: {test_schedule_hour}\n")
-print(f'Total Estimated Hours: {cycle_time + labor_hours + test_schedule_hour if cycle_time and labor_hours and test_schedule_hour else "N/A"}\n')
+print(f"\nCycle Time: {cap_df_cycle_time}")
+print(f"Labor Hours: {cap_df_labor_hours}")
+print(f"Test Schedule Hour: {cap_df_test_schedule_hour}\n")
+
+print(f"Core Loss Cycle|Labour|Test Schedule Hours for Transformer ID {transformer_id}:")
+print(f"\nCycle Time: {core_loss_cycle_time}")
+print(f"Labor Hours: {core_loss_labor_hours}")
+print(f"Test Schedule Hour: {core_loss_test_schedule_hour}\n")
+
+# Calculate total estimated hours for Cap/DF and Core Loss separately
+if cap_df_cycle_time and cap_df_labor_hours and cap_df_test_schedule_hour:
+    total_cap_df_hours = cap_df_cycle_time + cap_df_labor_hours + cap_df_test_schedule_hour
+    print(f'\nTotal Estimated Cap/DF Hours: {total_cap_df_hours}\n')
+else:
+    print('Total Estimated Cap/DF Hours: N/A\n')
+
+if core_loss_cycle_time and core_loss_labor_hours and core_loss_test_schedule_hour:
+    total_core_loss_hours = core_loss_cycle_time + core_loss_labor_hours + core_loss_test_schedule_hour
+    print(f'Total Estimated Core Loss Hours: {total_core_loss_hours}\n')
+else:
+    print('Total Estimated Core Loss Hours: N/A\n')
+
+# def get_test_index(test_name, sap_json_path='data/SAP.json'):
+#     """
+#     Returns the index (as int) of the given test_name in the Revision(Classification) object of SAP.json.
+#     Returns None if not found.
+#     """
+#     with open(sap_json_path, 'r') as f:
+#         sap_data = json.load(f)
+#     classification = sap_data.get('Revision(Classification)', {})
+#     for idx, name in classification.items():
+#         if name and name.strip() == test_name:
+#             try:
+#                 return int(idx)
+#             except ValueError:
+#                 continue
+#     return None
+
+# # Example usage:
+# # test_index = get_test_index('Cap/DF - 2 windings')
+# # print(f"Index: {test_index}")
